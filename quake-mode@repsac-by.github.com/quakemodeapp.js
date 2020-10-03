@@ -179,7 +179,7 @@ var QuakeModeApp = class {
 	}
 
 	show() {
-		const { actor, focusout } = this;
+		const { actor } = this;
 
 		if ( this.state !== state.RUNNING )
 			return;
@@ -187,24 +187,36 @@ var QuakeModeApp = class {
 		if ( this.isTransition )
 			return;
 
-		this.isTransition = true;
-
 		actor.get_parent().set_child_above_sibling(actor, null);
-		actor.translation_y = - actor.height,
 		Main.wm.skipNextEffect(actor);
 		Main.activateWindow(actor.meta_window);
+
+		if ( this.ainmation_time === 0 ) {
+			this.showWindow();
+
+			return;
+		}
+
+		this.isTransition = true;
+		actor.translation_y = - actor.height,
 
 		actor.ease({
 			translation_y: 0,
 			duration: this.ainmation_time,
 			mode: Clutter.AnimationMode.EASE_OUT_QUART,
 			onComplete: () => {
+				this.showWindow();
 				this.isTransition = false;
-				if ( focusout )
-					once(global.display, 'notify::focus-window')
-						.then(() => this.hide());
 			},
 		});
+	}
+
+	showWindow() {
+		this.actor.translation_y = 0;
+
+		if ( this.focusout )
+			once(global.display, 'notify::focus-window')
+				.then(() => this.hide());
 	}
 
 	hide() {
@@ -216,6 +228,12 @@ var QuakeModeApp = class {
 		if ( this.isTransition )
 			return;
 
+		if ( this.ainmation_time === 0 ) {
+			this.hideWindow();
+
+			return;
+		}
+
 		this.isTransition = true;
 
 		actor.ease({
@@ -223,12 +241,16 @@ var QuakeModeApp = class {
 			duration: this.ainmation_time,
 			mode: Clutter.AnimationMode.EASE_IN_QUART,
 			onComplete: () => {
-				Main.wm.skipNextEffect(actor);
-				actor.meta_window.minimize();
-				actor.translation_y = 0;
+				this.hideWindow();
 				this.isTransition = false;
 			},
 		});
+	}
+
+	hideWindow() {
+		Main.wm.skipNextEffect(this.actor);
+		this.actor.meta_window.minimize();
+		this.actor.translation_y = 0;
 	}
 
 	place() {
